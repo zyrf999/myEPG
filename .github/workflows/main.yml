@@ -1,68 +1,52 @@
-name: EPG Auto Update
+name: 'Auto Update EPG'
 
 on:
   schedule:
-    - cron: '0 4,16 * * *'
+    - cron: '0 4,16 * * *'  # UTC 4点和16点 = 北京时间12点和0点
   workflow_dispatch:
   push:
-    branches: [master]
+    branches:
+      - master
 
 jobs:
   update:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    permissions:
+      contents: write
     
     steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
+      - name: Checkout code
+        uses: actions/checkout@v4
       
-      - name: Setup Python
-        uses: actions/setup-python@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-          cache: 'pipenv'  # 添加缓存
+          # 完全去掉 cache 配置
       
       - name: Install dependencies
         run: |
           pip install pipenv
-          pipenv install --deploy --dev
+          pipenv install --deploy
       
-      - name: Run EPG update
+      - name: Generate EPG files
         run: |
           pipenv run epg
-          # 检查输出文件
+          echo "查看生成的文件："
           ls -la output/
-          # 显示文件大小
-          du -h output/*
       
       - name: Commit and push changes
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
           
-          # 只添加必要的文件
-          if [[ -f "output/epg.xml" ]]; then
-            git add -f "output/epg.xml"
-          fi
-          if [[ -f "output/epg.gz" ]]; then
-            git add -f "output/epg.gz"
-          fi
+          git add output/
           
-          if ! git diff --staged --quiet; then
-            # 清理提交历史
-            git reset --soft $(git rev-list --max-parents=0 HEAD)
-            git commit --amend -m "Auto update: $(date +'%Y-%m-%d %H:%M')"
-            git push --force
+          if git diff --staged --quiet; then
+            echo "没有文件需要更新"
           else
-            echo "No changes to commit"
+            git commit -m "📺 EPG自动更新 - $(date +'%Y-%m-%d %H:%M:%S')"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           fi
-      
-      - name: Mirror to Gitee
-        if: success()
-        run: |
-          git remote add gitee git@gitee.com:jiang-wujun/myEPG.git || true
-          git push gitee master --force
-        env:
-          GIT_SSH_COMMAND: "ssh -i ~/.ssh/gitee_key"
