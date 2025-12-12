@@ -2,7 +2,7 @@ name: 'Auto Update EPG'
 
 on:
   schedule:
-    - cron: '0 4,16 * * *'  # UTC 4点和16点 = 北京时间12点和0点
+    - cron: '0 7,15,23 * * *'  # UTC 7,15,23点 = 北京时间15,23,7点
   workflow_dispatch:
   push:
     branches:
@@ -19,12 +19,13 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
-          # 完全去掉 cache 配置
       
       - name: Install dependencies
         run: |
@@ -37,16 +38,17 @@ jobs:
           echo "查看生成的文件："
           ls -la output/
       
-      - name: Commit and push changes
+      - name: Commit and push to master
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           
+          # 检查是否有文件变化
           git add output/
           
           if git diff --staged --quiet; then
             echo "没有文件需要更新"
           else
-            git commit -m "📺 EPG自动更新 - $(date +'%Y-%m-%d %H:%M:%S')"
-            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+            git commit -m "📺 EPG自动更新 - $(date +'%Y-%m-%d %H:%M')"
+            git push origin master
           fi
