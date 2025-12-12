@@ -2,7 +2,7 @@ name: 'Auto Update EPG'
 
 on:
   schedule:
-    - cron: '0 7,15,23 * * *'  # UTC 7,15,23点 = 北京时间15,23,7点
+    - cron: '0 4,16 * * *'  # UTC 4点和16点 = 北京时间12点和0点
   workflow_dispatch:
   push:
     branches:
@@ -20,35 +20,48 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
       
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          update-environment: true
+          cache: 'pipenv'
+      
+      - name: Install pipenv
+        run: pip3 install --user pipenv
       
       - name: Install dependencies
         run: |
-          pip install pipenv
-          pipenv install --deploy
+          pipenv lock
+          pipenv --python 3.13 && pipenv install --deploy
       
       - name: Generate EPG files
         run: |
           pipenv run epg
-          echo "查看生成的文件："
+          echo "=== 调试信息 ==="
+          echo "当前目录:"
+          pwd
+          echo "生成的文件:"
           ls -la output/
+          echo "EPG文件前30行:"
+          head -30 output/epg.xml
+          echo "频道ID检查:"
+          grep 'channel id=' output/epg.xml | head -5
       
-      - name: Commit and push to master
+      - name: Commit and push if changed
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          # 检查是否有文件变化
-          git add output/
-          
-          if git diff --staged --quiet; then
-            echo "没有文件需要更新"
-          else
-            git commit -m "📺 EPG自动更新 - $(date +'%Y-%m-%d %H:%M')"
-            git push origin master
+          if [[ -f "output/epg.xml" ]]; then
+            git add -f "output/epg.xml"
+          fi
+          if [[ -f "output/epg.gz" ]]; then
+            git add -f "output/epg.gz"
+          fi
+          if ! git diff --staged --quiet; then
+            git reset --soft $(git rev-list --max-parents=0 HEAD)
+            git commit --amend -m "EPG自动更新 $(date +'%Y-%m-%d %H:%M')"
+            git push --force
           fi
