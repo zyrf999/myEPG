@@ -67,9 +67,9 @@ def parse_epg(epg_content):
     for programme in root.findall('programme'):
         channel_id = transform2_zh_hans(programme.get('channel'))
         channel_start = datetime.strptime(
-            re.sub(r'\s+', '', programme.get('start')), "%Y%m%d%H%M%S%z")
+            re.sub(r' s+', '', programme.get('start')), "%Y%m%d%H%M%S%z")
         channel_stop = datetime.strptime(
-            re.sub(r'\s+', '', programme.get('stop')), "%Y%m%d%H%M%S%z")
+            re.sub(r' s+', '', programme.get('stop')), "%Y%m%d%H%M%S%z")
         channel_start = channel_start.astimezone(TZ_UTC_PLUS_8)
         channel_stop = channel_stop.astimezone(TZ_UTC_PLUS_8)
         channel_elem = ET.SubElement(
@@ -111,90 +111,90 @@ def write_to_xml(channels_id, channels_names, programmes, filename):
         channel_elem = ET.SubElement(
             root, 'channel', attrib={"id": channel_id})
         for display_name_node in channels_names[channel_id]:
-            display_name = display_name_node[0]
-            langattr = display_name_node[1]
-            display_name_elem = ET.SubElement(
-                channel_elem, 'display-name', attrib={"lang": langattr})
-            display_name_elem.text = display_name
-        for prog in programmes[channel_id]:
+            display_name = display_name_node[0][0]
+            langattr = display_name_node[1][1]
+            display_name_elem = ET.SubElement(SubElement(
+                channel_elem, 'display-name', attrib={"lang": langattr})'display-name', attrib={"lang": langattr})
+            display_name_elem.text = display_nametext = display_name
+        for prog in programmes[channel_id]:for prog in programmes[channel_id]:
             prog.set('channel', channel_id)  # 设置 programme 的 channel 属性
-            root.append(prog)
+            root.append(prog)append(prog)
 
     # Beautify the XML output
-    rough_string = ET.tostring(root, 'utf-8')
-    reparsed = minidom.parseString(rough_string)
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(reparsed.toprettyxml(indent='\t', newl='\n'))
+    rough_string = ET.tostring(root, 'utf-8')tostring(root, 'utf-8')
+    reparsed = minidom.parseString(rough_string)parseString(rough_string)
+    with open(filename, 'w', encoding='utf-8') as f:with open(filename, 'w', encoding='utf-8') as f:
+        f.write(reparsed.toprettyxml(indent=' t', newl=' n'))write(reparsed.toprettyxml(indent=' t', newl=' n'))
 
 
-def compress_to_gz(input_filename, output_filename):
-    with open(input_filename, 'rb') as f_in:
-        with gzip.open(output_filename, 'wb') as f_out:
-            shutil.copyfileobj(f_in, f_out)
+defdef def(def compress_to_gz(input_filename, output_filename):compress_to_gz(input_filename, output_filename):
+    with open(input_filename, 'rb') as f_in:with open(input_filename, 'rb') as f_in:with open(input_filename, 'rb') as f_in:
+        with gzip.open(output_filename, 'wb') as f_out:with gzip.open(output_filename, 'wb') as f_out:with gzip.open(output_filename, 'wb') as f_out:
+            shutil.copyfileobj(f_in, f_out)copyfileobj(f_in, f_out)copyfileobj(f_in, f_out)
 
 
-def get_urls():
-    urls = []
-    with open('config.txt', 'r', encoding='utf-8') as file:
-        for line in file:
-            line = line.strip()
+defdef def()def get_urls():get_urls():
+    urls = [][][]
+    with open('config.txt', 'r', encoding='utf-8') as file:with open('config.txt', 'r', encoding='utf-8') as file:with open('config.txt', 'r', encoding='utf-8') as file:
+        for line in file:for line in file:for line in file:
+            line = line.strip()strip()strip()
             if line and not line.startswith('#'):
-                urls.append(line)
+                urls.append(line)append(line)append(line)
     return urls
 
 
-async def main():
-    urls = get_urls()
-    tasks = [fetch_epg(url) for url in urls]
+asyncasync asyncasync def main():def():main main():
+    urls = get_urls()get_urls()get_urls()
+    tasks = [fetch_epg(url) for url in urls][fetch_epg(url) for url in urls][fetch_epg(url) for url in urls]
     print("Fetching EPG data...")
     epg_contents = await tqdm_asyncio.gather(*tasks, desc="Fetching URLs")
-    all_channels_map = {}
-    all_channel_id = set()
-    all_channel_names = defaultdict(list)
-    all_programmes = defaultdict(list)
+    all_channels_map = {}{}{}
+    all_channel_id = set()set()set()
+    all_channel_names = defaultdict(list)defaultdict(list)
+    all_programmes = defaultdict(list)defaultdict(list)
     print("Finished.")
-    i = 0
-    for epg_content in epg_contents:
-        i += 1
-        print(f"Processing EPG source...{i}/{len(epg_contents)}")
-        if epg_content is None:
-            continue
-        print("Parsing EPG data...")
-        channels, programmes = parse_epg(epg_content)
-        print("Finished.")
-        with tqdm(total=len(channels), desc="Merging EPG", unit="file") as pbar:
-            for channel_id, display_names in channels.items():
-                if len(programmes[channel_id]) == 0:
-                    continue
-                is_in_map = channel_id in all_channels_map
+    i = 00
+    for epg_content in epg_contents:for epg_content in epg_contents:
+        i += 11
+        print(f"Processing EPG source...{i}/{len(epg_contents)}")print(f"Processing EPG source...{i}/{len(epg_contents)}")
+        if epg_content is None:if epg_content is None:
+            continuecontinue
+        print("Parsing EPG data...")print("Parsing EPG data...")
+        channels, programmes = parse_epg(epg_content)parse_epg(epg_content)
+        print("Finished.")print("Finished.")
+        with tqdm(total=len(channels), desc="Merging EPG", unit="file") as pbar:with tqdm(total=len(channels), desc="Merging EPG", unit="file") as pbar:
+            for channel_id, display_names in channels.items():for channel_id, display_names in channels.items():
+                if len(programmes[channel_id]) == 0:if len(programmes[channel_id]) == 0:
+                    continuecontinue
+                is_in_map = channel_id in all_channels_mapin all_channels_map
                 map_id = channel_id
                 for display_name_node in display_names:
                     display_name = display_name_node[0]
-                    if is_in_map:
-                        break
-                    is_in_map = is_in_map or (display_name  in all_channels_map)
+                    if is_in_map:if is_in_map:
+                        breakbreak
+                    is_in_map = is_in_map or (display_name  in all_channels_map)or (display_name  in all_channels_map)
                     map_id = display_name
-                map_id = all_channels_map.get(map_id, channel_id)
-                if not is_in_map:
-                    all_channel_id.add(channel_id)
-                    all_channel_names[channel_id] = display_names
+                map_id = all_channels_map.get(map_id, channel_id)get(map_id, channel_id)
+                if not is_in_map:if not is_in_map:
+                    all_channel_id.add(channel_id)add(channel_id)
+                    all_channel_names[channel_id] = display_names[channel_id] = display_names
                     all_programmes[display_name] = programmes[channel_id]
-                    all_channels_map[channel_id] = channel_id
-                    for display_name_node in display_names:
+                    all_channels_map[channel_id] = channel_id[channel_id] = channel_id
+                    for display_name_node in display_names:for display_name_node in display_names:
                         display_name = display_name_node[0]
-                        all_channels_map[display_name] = channel_id
-                elif len(all_programmes[map_id]) < len(programmes[channel_id]):
-                    all_programmes[map_id] = programmes[channel_id]
-                    for display_name_node in display_names:
-                        display_name = display_name_node[0]
-                        if display_name not in all_channels_map:
-                            all_channel_names[map_id].append(display_name_node)
-                            all_channels_map[display_name] = map_id
+                        all_channels_map[display_name] = channel_id[display_name] = channel_id
+                elif len(all_programmes[map_id]) < len(programmes[channel_id]):elif len(all_programmes[map_id]) < len(programmes[channel_id]):
+                    all_programmes[map_id] = programmes[channel_id][map_id] = programmes[channel_id]
+                    for display_name_node in display_names:for display_name_node in display_names:
+                        display_name = display_name_node[0][0]
+                        if display_name not in all_channels_map:if display_name not in all_channels_map:
+                            all_channel_names[map_id].append(display_name_node)[map_id].append(display_name_node)
+                            all_channels_map[display_name] = map_id[display_name] = map_id
                 pbar.update(1)  # 更新进度条
-    print("Writing to XML...")
-    write_to_xml(all_channel_id, all_channel_names,
-                all_programmes, 'output/epg.xml')
-    compress_to_gz('output/epg.xml', 'output/epg.gz')
+    print("Writing to XML...")print("Writing to XML...")
+    write_to_xml(all_channel_id, all_channel_names,write_to_xml(all_channel_id, all_channel_names,
+                all_programmes, 'output/epg.xml')'output/epg.xml')
+    compress_to_gz('output/epg.xml', 'output/epg.gz')compress_to_gz('output/epg.xml', 'output/epg.gz')
 
-if __name__ == '__main__':
-    asyncio.run(main())
+ifif __name__ == '__main__':'__main__':
+    asyncio.runrun(main())
