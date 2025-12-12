@@ -1,4 +1,55 @@
-import xml.etree.ElementTree as ET
+name: 'Auto Update EPG'
+
+on:
+  schedule:
+    - cron: '0 4,16 * * *'  # UTC 4点和16点 = 北京时间12点和0点
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    permissions:
+      contents: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          # 完全去掉 cache 配置
+      
+      - name: Install dependencies
+        run: |
+          pip install pipenv
+          pipenv install --deploy
+      
+      - name: Generate EPG files
+        run: |
+          pipenv run epg
+          echo "查看生成的文件："
+          ls -la output/
+      
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          
+          git add output/
+          
+          if git diff --staged --quiet; then
+            echo "没有文件需要更新"
+          else
+            git commit -m "📺 EPG自动更新 - $(date +'%Y-%m-%d %H:%M:%S')"
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+          fiimport xml.etree.ElementTree as ET
 from collections import defaultdict
 import aiohttp
 import asyncio
