@@ -1,58 +1,68 @@
-name: 'Auto Update EPG'
+name: EPG Auto Update
 
-# 修正点1：`on` 下的所有触发器已正确缩进
 on:
   schedule:
-    - cron: '0 7,15,23 * * *'  # UTC 7,15,23点 = 北京时间15,23,7点
+    - cron: '0 4,16 * * *'
   workflow_dispatch:
   push:
-    branches:
-      - master
+    branches: [master]
 
 jobs:
   update:
-连续运行: Ubuntu-最新版
-超时-分钟: 30
-
-    # 已配置写入权限,正确[引用:2]
-许可:
-内容: 写
-
-步伐:
-      - 名字: 结帐代码
-使用: 动作/签出@v4
-        # 修正点2(推荐):在检出时传入令牌，便于后续推送
-随着:
-代币: ${{秘密。GITHUB_TOKEN}}
-
-      - 名字: 设置Python
-使用: 操作/设置-python@v5
-随着:
-python版本: '3.13'
-          # 去掉隐藏物配置是允许的,只是不会缓存包
-
-      - 名字: 安装依赖项
-奔跑: |
-pip安装管道
-管道安装-部署
-
-      - 名字: 生成EPG文件
-奔跑: |
-pipenv运行epg
-回声”查看生成的文件:"
-ls -la输出/
-
-      - 名字: 提交和推送更改
-奔跑: |
-git config-local user . email " github-actions[bot]@ users . no reply . github . com "
-git config -本地user.name "github-actions[bot]"
-
-git添加输出/
-
-if git diff-staged-quiet；然后
-回声”没有文件需要更新"
-其他
-git提交-m "📺高级代表团(Eminent Person Group)自动更新- $(date +'%Y-%m-%d %H:%M:%S ')"
-# 修正点3(推荐):因为检出时已设置令牌，这里可以直接推送
-git推送
-船方不负担装货费用
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.13'
+          cache: 'pipenv'  # 添加缓存
+      
+      - name: Install dependencies
+        run: |
+          pip install pipenv
+          pipenv install --deploy --dev
+      
+      - name: Run EPG update
+        run: |
+          pipenv run epg
+          # 检查输出文件
+          ls -la output/
+          # 显示文件大小
+          du -h output/*
+      
+      - name: Commit and push changes
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # 只添加必要的文件
+          if [[ -f "output/epg.xml" ]]; then
+            git add -f "output/epg.xml"
+          fi
+          if [[ -f "output/epg.gz" ]]; then
+            git add -f "output/epg.gz"
+          fi
+          
+          if ! git diff --staged --quiet; then
+            # 清理提交历史
+            git reset --soft $(git rev-list --max-parents=0 HEAD)
+            git commit --amend -m "Auto update: $(date +'%Y-%m-%d %H:%M')"
+            git push --force
+          else
+            echo "No changes to commit"
+          fi
+      
+      - name: Mirror to Gitee
+        if: success()
+        run: |
+          git remote add gitee git@gitee.com:jiang-wujun/myEPG.git || true
+          git push gitee master --force
+        env:
+          GIT_SSH_COMMAND: "ssh -i ~/.ssh/gitee_key"
